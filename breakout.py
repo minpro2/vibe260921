@@ -6,7 +6,13 @@
     Space    공 발사 / 일시정지 해제 / 재시작
     P        일시정지
     R        재시작
+    T        순위표 보기 (화면 오른쪽 위 버튼 클릭도 가능, 아무 키/클릭으로 닫기)
+    F11      전체 화면 전환 (창 크기를 바꿔도 비율을 유지하며 화면에 맞게 확대된다)
     Esc      종료
+
+랭킹
+    게임 오버 시 점수가 상위 5위 안에 들면 이니셜 3글자(A-Z)를 입력해 기록한다.
+    Backspace 로 지우고 Enter 로 확정. 기록은 highscores.json 에 저장된다.
 
 아이템 (벽돌이 깨질 때 일정 확률로 떨어지며, 패들로 받으면 발동)
     W  패들 확대      일정 시간 패들이 길어진다
@@ -17,8 +23,11 @@
 """
 
 import tkinter as tk
+import json
 import math
+import os
 import random
+import sys
 
 # ---------------------------------------------------------------- 설정 값
 WIDTH, HEIGHT = 800, 600
@@ -82,30 +91,139 @@ CRACKED = "#7a7a92"
 
 FONT = "맑은 고딕"
 
+# ---- 랭킹
+RANK_COUNT = 5
+INITIALS_LEN = 3
+HIGHLIGHT = "#ffd93d"
+# 순위표 버튼 (화면 오른쪽 위)
+BTN_RECT = (WIDTH - 110, 12, WIDTH - 20, 48)
+SCORE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "highscores.json")
+
+
+def load_scores():
+    """저장된 랭킹을 [{"name", "score"}, ...] (점수 내림차순)로 읽는다. 파일이 없거나 깨졌으면 빈 목록."""
+    try:
+        with open(SCORE_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        scores = [
+            {"name": str(e["name"])[:INITIALS_LEN], "score": int(e["score"])}
+            for e in data
+        ]
+    except (OSError, ValueError, TypeError, KeyError):
+        return []
+    scores.sort(key=lambda e: e["score"], reverse=True)
+    return scores[:RANK_COUNT]
+
+
+def save_scores(scores):
+    try:
+        with open(SCORE_FILE, "w", encoding="utf-8") as f:
+            json.dump(scores, f, ensure_ascii=False, indent=2)
+    except OSError:
+        pass   # 저장 실패해도 게임은 계속 진행한다
+
+
+class ScaledCanvas(tk.Canvas):
+    """논리 좌표(WIDTH x HEIGHT)로 그리면 창 크기에 맞춰 확대해서 보여 주는 캔버스.
+
+    게임 코드는 항상 800x600 기준 좌표로 create_*/coords/move 를 부르고, 실제 픽셀 좌표·글꼴 크기·
+    선 굵기는 여기서 현재 배율로 바꾼다. 배율이 바뀌면(set_scale) 이미 그려진 항목도 다시 배치한다.
+    """
+
+    def __init__(self, master, **kw):
+        super().__init__(master, width=WIDTH, height=HEIGHT, **kw)
+        self.scale = 1.0
+        self._items = {}    # 항목 id -> {"coords": 논리 좌표, "font": 논리 글꼴, "width": 논리 선 굵기}
+
+    def _map(self, coords):
+        s = self.scale
+        return [c * s for c in coords]
+
+    def _font(self, font):
+        family, size, *style = font
+        return (family, max(1, round(size * self.scale)), *style)
+
+    def _width(self, width):
+        return max(1, round(width * self.scale))
+
+    def _add(self, method, coords, kw):
+        font, width = kw.get("font"), kw.get("width")
+        opts = dict(kw)
+        if font is not None:
+            opts["font"] = self._font(font)
+        if width is not None:
+            opts["width"] = self._width(width)
+        item = method(self, *self._map(coords), **opts)
+        self._items[item] = {"coords": list(coords), "font": font, "width": width}
+        return item
+
+    def create_rectangle(self, *coords, **kw):
+        return self._add(tk.Canvas.create_rectangle, coords, kw)
+
+    def create_oval(self, *coords, **kw):
+        return self._add(tk.Canvas.create_oval, coords, kw)
+
+    def create_text(self, *coords, **kw):
+        return self._add(tk.Canvas.create_text, coords, kw)
+
+    def coords(self, item, *coords):
+        rec = self._items[item]
+        rec["coords"] = list(coords)
+        tk.Canvas.coords(self, item, *self._map(coords))
+
+    def move(self, item, dx, dy):
+        coords = self._items[item]["coords"]
+        self.coords(item, *(c + (dx, dy)[i % 2] for i, c in enumerate(coords)))
+
+    def delete(self, *tags):
+        if "all" in tags:
+            self._items.clear()
+        else:
+            for tag in tags:
+                self._items.pop(tag, None)
+        super().delete(*tags)
+
+    def set_scale(self, scale):
+        self.scale = scale
+        self.configure(width=round(WIDTH * scale), height=round(HEIGHT * scale))
+        for item, rec in self._items.items():
+            tk.Canvas.coords(self, item, *self._map(rec["coords"]))
+            if rec["font"] is not None:
+                self.itemconfigure(item, font=self._font(rec["font"]))
+            if rec["width"] is not None:
+                self.itemconfigure(item, width=self._width(rec["width"]))
+
 
 class Breakout:
     def __init__(self, root):
         self.root = root
         root.title("블럭깨기")
-        root.resizable(False, False)
+        root.configure(bg="#000000")          # 화면 비율이 다를 때 남는 여백
+        root.geometry(f"{WIDTH}x{HEIGHT}")
+        root.minsize(WIDTH // 2, HEIGHT // 2)
 
-        self.canvas = tk.Canvas(
-            root, width=WIDTH, height=HEIGHT,
-            bg=BG, highlightthickness=0,
-        )
-        self.canvas.pack()
+        # 게임 화면은 창 한가운데에 비율을 유지한 채로 놓는다
+        self.canvas = ScaledCanvas(root, bg=BG, highlightthickness=0)
+        self.canvas.place(relx=0.5, rely=0.5, anchor="center")
+        self.fullscreen = False
 
         # 입력 상태
         self.keys = set()
+        root.bind("<Configure>", self._on_resize)
         root.bind("<KeyPress>", self._on_key_press)
         root.bind("<KeyRelease>", lambda e: self.keys.discard(e.keysym))
-        self.canvas.bind("<Motion>", self._on_mouse)
+        root.bind("<Motion>", self._on_mouse)       # 여백 위에서도 패들이 따라오도록 root 에 건다
+        root.bind("<Button-1>", self._on_click)
         self.canvas.focus_set()
 
         self.state = "ready"
         self.hud = None
         self.effect_text = None
         self.overlay = []
+        self.scores = load_scores()
+        self.initials = ""
+        self.last_rank = None     # 방금 기록한 순위 인덱스 (게임 오버 화면 강조용)
+        self.board_prev = None    # 순위표를 열기 전 상태
         self.new_game()
         self._tick()
 
@@ -141,6 +259,7 @@ class Breakout:
         self._draw_paddle()
 
         self._draw_hud()
+        self._draw_rank_button()
         self._reset_ball()
 
     def _build_bricks(self):
@@ -195,6 +314,14 @@ class Breakout:
 
         if key == "Escape":
             self.root.destroy()
+        elif key == "F11":
+            self._toggle_fullscreen()   # 어떤 상태에서든 동작한다
+        elif self.state == "entry":
+            self._on_entry_key(event)   # 이니셜 입력 중에는 R/P/Space 등도 글자 입력으로만 쓴다
+        elif self.state == "board":
+            self._close_board()         # 순위표는 아무 키나 누르면 닫힌다
+        elif key in ("t", "T"):
+            self._open_board()
         elif key in ("r", "R"):
             self.new_game()
         elif key in ("p", "P"):
@@ -215,10 +342,38 @@ class Breakout:
             elif self.state == "gameover":
                 self.new_game()
 
+    def _toggle_fullscreen(self):
+        self.fullscreen = not self.fullscreen
+        self.root.attributes("-fullscreen", self.fullscreen)
+
+    def _on_resize(self, event):
+        if event.widget is not self.root:
+            return
+        scale = max(0.25, min(event.width / WIDTH, event.height / HEIGHT))
+        if abs(scale - self.canvas.scale) > 1e-3:
+            self.canvas.set_scale(scale)
+
+    def _to_game(self, event):
+        """화면(root) 기준 마우스 위치를 게임 논리 좌표로 바꾼다."""
+        s = self.canvas.scale
+        return (
+            (event.x_root - self.canvas.winfo_rootx()) / s,
+            (event.y_root - self.canvas.winfo_rooty()) / s,
+        )
+
     def _on_mouse(self, event):
         if self.state in ("ready", "playing"):
-            self.px = event.x
+            self.px = self._to_game(event)[0]
             self._clamp_paddle()
+
+    def _on_click(self, event):
+        if self.state == "board":
+            self._close_board()
+        else:
+            x, y = self._to_game(event)
+            x1, y1, x2, y2 = BTN_RECT
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                self._open_board()
 
     # ------------------------------------------------------------ 메인 루프
     def _tick(self):
@@ -469,10 +624,80 @@ class Breakout:
         self._draw_hud()
         if self.lives <= 0:
             self._clear_effects()
-            self.state = "gameover"
-            self._show_overlay("GAME OVER", f"점수 {self.score}   ·   Space / R 키로 재시작")
+            self._end_game()
         else:
             self._reset_ball()
+
+    # ------------------------------------------------------------ 랭킹
+    def _rank_of(self, score):
+        """이 점수가 들어갈 순위 인덱스(0부터). 동점이면 먼저 기록한 사람이 위. 순위권 밖이면 None."""
+        if score <= 0:
+            return None
+        idx = sum(1 for e in self.scores if e["score"] >= score)
+        return idx if idx < RANK_COUNT else None
+
+    def _open_board(self):
+        """순위표를 연다. 플레이 중이면 일시정지 상태로 넘어간다."""
+        if self.state not in ("ready", "playing", "paused", "gameover"):
+            return
+        self.board_prev = self.state
+        self.state = "board"
+        self._draw_ranking(board=True)
+
+    def _close_board(self):
+        prev = self.board_prev
+        if prev == "gameover":
+            self.state = "gameover"
+            self._draw_ranking(highlight=self.last_rank)
+        elif prev == "ready":
+            self.state = "ready"
+            self._show_overlay("Space 를 눌러 시작", f"LEVEL {self.level}")
+        else:   # playing / paused
+            self.state = "paused"
+            self._show_overlay("일시정지", "P 또는 Space 로 계속")
+
+    def _end_game(self):
+        self.last_rank = None
+        if self._rank_of(self.score) is not None:
+            self.state = "entry"
+            self.initials = ""
+            self._draw_entry()
+        else:
+            self.state = "gameover"
+            self._draw_ranking()
+
+    def _on_entry_key(self, event):
+        key = event.keysym
+        if key == "BackSpace":
+            self.initials = self.initials[:-1]
+        elif key in ("Return", "KP_Enter"):
+            if len(self.initials) == INITIALS_LEN:
+                self._submit_initials()
+                return
+        else:
+            ch = self._letter_from_event(event)
+            if ch and len(self.initials) < INITIALS_LEN:
+                self.initials += ch
+        self._draw_entry()
+
+    @staticmethod
+    def _letter_from_event(event):
+        """눌린 키를 대문자 A-Z로 돌려준다. 한글 IME 상태여도 가상 키 코드로 알파벳을 얻는다."""
+        ks = event.keysym
+        if len(ks) == 1 and ks.isascii() and ks.isalpha():
+            return ks.upper()
+        if sys.platform == "win32" and 65 <= event.keycode <= 90:
+            return chr(event.keycode)
+        return None
+
+    def _submit_initials(self):
+        idx = self._rank_of(self.score)
+        self.scores.insert(idx, {"name": self.initials, "score": self.score})
+        self.scores = self.scores[:RANK_COUNT]
+        save_scores(self.scores)
+        self.last_rank = idx
+        self.state = "gameover"
+        self._draw_ranking(highlight=idx)
 
     def _level_clear(self):
         self.level += 1
@@ -550,6 +775,80 @@ class Breakout:
         for item in self.overlay:
             self.canvas.delete(item)
         self.overlay = []
+
+    def _draw_panel(self):
+        """랭킹·이니셜 입력 화면의 배경 패널."""
+        self._clear_overlay()
+        self.overlay.append(self.canvas.create_rectangle(
+            200, 90, WIDTH - 200, HEIGHT - 90,
+            fill="#0c0c14", outline=ACCENT, width=2,
+        ))
+
+    def _overlay_text(self, x, y, text, color=FG, size=14, bold=False, anchor="center"):
+        self.overlay.append(self.canvas.create_text(
+            x, y, text=text, anchor=anchor, fill=color,
+            font=(FONT, size, "bold") if bold else (FONT, size),
+        ))
+
+    def _draw_entry(self):
+        """상위 5위 안에 들었을 때 이니셜 3글자를 입력받는 화면."""
+        self._draw_panel()
+        rank = self._rank_of(self.score) + 1
+        cx = WIDTH / 2
+        self._overlay_text(cx, 145, "NEW RECORD!", HIGHLIGHT, 30, True)
+        self._overlay_text(cx, 195, f"{rank}위  ·  점수 {self.score}", FG, 16)
+
+        for i in range(INITIALS_LEN):
+            x = cx + (i - (INITIALS_LEN - 1) / 2) * 76
+            active = i == len(self.initials)
+            self.overlay.append(self.canvas.create_rectangle(
+                x - 30, 250, x + 30, 330,
+                outline=HIGHLIGHT if active else ACCENT,
+                width=3 if active else 2,
+            ))
+            if i < len(self.initials):
+                self._overlay_text(x, 290, self.initials[i], FG, 38, True)
+
+        done = len(self.initials) == INITIALS_LEN
+        self._overlay_text(
+            cx, 385,
+            "Enter 로 확정" if done else "이니셜 3글자를 입력하세요 (A-Z)",
+            HIGHLIGHT if done else FG, 14,
+        )
+        self._overlay_text(cx, 415, "Backspace 지우기", "#8a8aa0", 11)
+
+    def _draw_rank_button(self):
+        x1, y1, x2, y2 = BTN_RECT
+        self.canvas.create_rectangle(
+            x1, y1, x2, y2, fill="#1d1d2e", outline=ACCENT, width=2,
+        )
+        self.canvas.create_text(
+            (x1 + x2) / 2, (y1 + y2) / 2, text="순위표 (T)",
+            fill=FG, font=(FONT, 11, "bold"),
+        )
+
+    def _draw_ranking(self, highlight=None, board=False):
+        """상위 5위 랭킹 화면. board=False 는 게임 오버 화면(내 점수 포함), True 는 순위표 보기."""
+        self._draw_panel()
+        cx = WIDTH / 2
+        if board:
+            self._overlay_text(cx, 135, "RANKING", ACCENT, 30, True)
+            self._overlay_text(cx, 178, "TOP 5", FG, 16)
+        else:
+            self._overlay_text(cx, 135, "GAME OVER", ACCENT, 30, True)
+            self._overlay_text(cx, 178, f"점수 {self.score}", FG, 16)
+            self._overlay_text(cx, 225, "RANKING", "#8a8aa0", 12, True)
+
+        for i in range(RANK_COUNT):
+            y = 265 + i * 38
+            entry = self.scores[i] if i < len(self.scores) else None
+            color = HIGHLIGHT if i == highlight else FG
+            self._overlay_text(250, y, f"{i + 1}위", color, 16, True, "w")
+            self._overlay_text(370, y, entry["name"] if entry else "---", color, 16, True, "w")
+            self._overlay_text(550, y, f"{entry['score']:,}" if entry else "-", color, 16, True, "e")
+
+        footer = "아무 키나 누르거나 클릭하면 닫힙니다" if board else "Space / R 키로 재시작"
+        self._overlay_text(cx, HEIGHT - 120, footer, FG, 13)
 
 
 def main():
