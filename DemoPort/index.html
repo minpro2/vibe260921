@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>테스트 | 바이브코딩 · Python · HTML5 개발자</title>
+  <meta name="description" content="개발자 테스트의 프로필 사이트. 바이브코딩, Python, HTML5로 작업합니다.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1220" media="(prefers-color-scheme: dark)">
+
+  <!-- Open Graph. og:image 는 배포 주소가 정해지면 절대 주소(https://…/assets/og-image.png)로 바꿔야 공유 미리보기가 안정적으로 뜬다. -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="테스트 | 개발자 프로필">
+  <meta property="og:description" content="바이브코딩, Python, HTML5로 작업하는 개발자 테스트의 프로필 사이트.">
+  <meta property="og:image" content="assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="테스트 — 바이브코딩 · Python · HTML5">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- 화면이 그려지기 전에 실행해야 하는 아주 작은 스크립트: JS 사용 가능 표시 + 저장된 테마 복원 (깜빡임 방지) -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      root.classList.add('js');
+      try {
+        var saved = localStorage.getItem('demoport-theme');
+        if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
+      } catch (e) { /* 저장소를 못 써도 시스템 설정을 그대로 따른다 */ }
+    })();
+  </script>
+  <script src="js/main.js" defer></script>
+</head>
+
+<body id="top">
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+  <header class="site-header" id="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#top">테스트</a>
+
+      <nav class="site-nav" id="site-nav" aria-label="주 메뉴">
+        <ul>
+          <li><a href="#about">소개</a></li>
+          <li><a href="#skills">기술</a></li>
+          <li><a href="#projects">프로젝트</a></li>
+          <li><a href="#contact">연락처</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <!-- 아래 두 버튼은 JavaScript 가 있을 때만 보인다 -->
+        <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>
+          </svg>
+          <span class="sr-only">다크 모드</span>
+        </button>
+        <button class="icon-btn menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+            <path class="icon-menu" d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path class="icon-close" d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <span class="sr-only">메뉴</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+
+    <!-- ============================================================ 히어로 -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="container">
+        <p class="eyebrow">개발자 프로필</p>
+        <h1 id="hero-title">안녕하세요, <span class="accent">테스트</span>입니다.</h1>
+        <p class="lead">바이브코딩, Python, HTML5로 만듭니다.</p>
+
+        <ul class="tags tags-lg" aria-label="주 개발 분야">
+          <li>바이브코딩</li>
+          <li>Python</li>
+          <li>HTML5</li>
+        </ul>
+
+        <div class="actions">
+          <a class="btn btn-primary" href="#projects">프로젝트 보기</a>
+          <a class="btn btn-ghost" href="mailto:cookietest@aaa.test">이메일 보내기</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 소개 -->
+    <section class="section" id="about" aria-labelledby="about-title">
+      <div class="container about">
+        <div class="avatar" aria-hidden="true">테</div>
+        <div class="about-text">
+          <h2 id="about-title">소개</h2>
+          <p>안녕하세요, 개발자 테스트입니다. 주로 바이브코딩, Python, HTML5로 작업합니다.</p>
+          <p>자세한 소개와 작업물은 준비 중입니다. 궁금한 점은 이메일로 편하게 문의해 주세요.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ 기술 -->
+    <section class="section" id="skills" aria-labelledby="skills-title">
+      <div class="container">
+        <h2 id="skills-title">기술</h2>
+        <p class="section-lead">주 개발 분야는 아래 세 가지입니다.</p>
+
+        <ul class="skills">
+          <li class="card skill">
+            <h3>바이브코딩</h3>
+            <p>AI와 대화하며 아이디어를 빠르게 코드로 옮기는 개발 방식입니다.</p>
+          </li>
+          <li class="card skill">
+            <h3>Python</h3>
+            <p>주력 언어입니다. 스크립트, 자동화, 백엔드까지 폭넓게 쓰이는 범용 언어입니다.</p>
+          </li>
+          <li class="card skill">
+            <h3>HTML5</h3>
+            <p>주력 마크업입니다. 시맨틱 구조와 접근성을 갖춘 웹 페이지의 뼈대입니다.</p>
+          </li>
+        </ul>
+        <!-- 보조 기술(CSS3, JavaScript, Git 등)은 실제로 사용하는 것만 골라 아래처럼 추가한다.
+        <ul class="tags" aria-label="보조 기술"><li>CSS3</li><li>JavaScript</li></ul>
+        -->
+      </div>
+    </section>
+
+    <!-- ============================================================ 프로젝트 -->
+    <section class="section" id="projects" aria-labelledby="projects-title">
+      <div class="container">
+        <h2 id="projects-title">프로젝트</h2>
+        <p class="section-lead">작업물은 이곳에 카드로 정리됩니다.</p>
+
+        <ul class="cards">
+          <li class="card card-empty">
+            <h3>프로젝트 준비 중</h3>
+            <p>공개할 작업물이 정리되는 대로 이곳에 추가됩니다.</p>
+          </li>
+
+          <!-- 프로젝트 카드 템플릿: 아래 <li> 블록을 복사해 내용만 바꾸면 카드가 늘어난다.
+               (실제 프로젝트가 생기면 위의 "준비 중" 카드는 지운다)
+
+          <li class="card">
+            <article class="project">
+              <h3>프로젝트 제목</h3>
+              <p>한 줄 설명</p>
+              <ul class="tags" aria-label="사용 기술"><li>Python</li><li>HTML5</li></ul>
+              <p class="links">
+                <a href="https://example.com/repo" target="_blank" rel="noopener noreferrer">프로젝트 제목 저장소 보기<span class="sr-only"> (새 탭)</span></a>
+                <a href="https://example.com/demo" target="_blank" rel="noopener noreferrer">프로젝트 제목 데모 보기<span class="sr-only"> (새 탭)</span></a>
+              </p>
+            </article>
+          </li>
+          -->
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============================================================ 연락처 -->
+    <section class="section" id="contact" aria-labelledby="contact-title">
+      <div class="container">
+        <h2 id="contact-title">연락처</h2>
+        <p class="section-lead">협업 제안이나 문의는 이메일로 보내 주세요.</p>
+
+        <div class="card contact-card">
+          <p class="contact-label">이메일</p>
+          <p class="contact-mail"><a href="mailto:cookietest@aaa.test">cookietest@aaa.test</a></p>
+
+          <div class="contact-actions">
+            <a class="btn btn-primary" href="mailto:cookietest@aaa.test">이메일 보내기</a>
+            <!-- 복사 버튼은 JavaScript 가 있을 때만 보인다 -->
+            <button class="btn btn-ghost copy-btn" id="copy-btn" type="button" data-copy="cookietest@aaa.test">주소 복사</button>
+            <span class="copy-status" id="copy-status" role="status" aria-live="polite"></span>
+          </div>
+
+          <ul class="links contact-links">
+            <li>GitHub <span class="soon">준비 중</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="year">2026</span> 테스트</p>
+      <a href="#top"><span aria-hidden="true">↑</span> 맨 위로</a>
+    </div>
+  </footer>
+</body>
+</html>
