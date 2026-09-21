@@ -1,0 +1,30 @@
+# 비밀 값 (네이버 API 인증 정보). 예시 파일(.env.example)만 올린다
+.env
+.env.*
+!.env.example
+
+# 파이썬 실행 부산물 / 가상환경
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+.env
+
+# PyInstaller 로 만든 실행 파일과 작업 폴더
+build/
+dist/
+
+# 수집·저장한 데이터 (기사·시세 데이터의 저작권과 이용 조건은 제공처에 있으므로 저장소에 올리지 않는다)
+news_result.*
+kospi200_view.*
+
+# 게임 저장 데이터 (컴퓨터마다 다르다)
+highscores.json
+
+# 로그 / 운영체제·에디터 파일
+*.log
+.idea/
+.DS_Store
+Thumbs.db
